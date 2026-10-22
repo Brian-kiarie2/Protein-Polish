@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ProteinPolish: Free Online PDB Cleaner for Docking Prep</title>
+<meta name="description" content="Free browser-based tool to clean PDB files: remove waters, ligands and alternate conformations, select chains and residue ranges, preview in 3D, get a Vina docking box. No login, files never leave your device.">
+<meta property="og:title" content="ProteinPolish: Free Online PDB Cleaner">
+<meta property="og:description" content="Upload a messy PDB, download a clean protein. Free, no login, private.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0A84FF">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"ProteinPolish","description":"Free in-browser PDB cleaning and docking preparation tool.","applicationCategory":"ScientificApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.4/3Dmol-min.js"></script>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f6f9fc;--card:#fff;--tx:#0f172a;--mut:#64748b;--bd:#e2e8f0;--acc:#0A84FF;--viewbg:#ffffff}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b1220;--card:#111a2e;--tx:#e6edf7;--mut:#8da0bb;--bd:#22314d;--viewbg:#0f172a}}
+:root[data-theme="dark"]{--bg:#0b1220;--card:#111a2e;--tx:#e6edf7;--mut:#8da0bb;--bd:#22314d;--viewbg:#0f172a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+header{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--bd);background:var(--card)}
+h1{font-size:20px;margin:0}h1 span{color:var(--acc)}.tag{color:var(--mut);flex:1}
+button,.btn{font:inherit;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:8px;padding:7px 12px;cursor:pointer}
+button.p{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}button:disabled{opacity:.4;cursor:not-allowed}
+main{display:grid;grid-template-columns:320px minmax(0,1fr) 320px;gap:14px;padding:14px;max-width:1500px;margin:auto}
+@media(max-width:1100px){main{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:14px}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:0 0 10px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0}
+.seg{display:flex;border:1px solid var(--bd);border-radius:8px;overflow:hidden}.seg label{flex:1;text-align:center;padding:6px 4px;cursor:pointer;color:var(--mut)}
+.seg input{display:none}.seg input:checked+span{color:var(--tx);font-weight:600}.seg label:has(input:checked){background:color-mix(in srgb,var(--acc) 15%,transparent)}
+input[type=text],input[type=number],textarea{width:100%;font:inherit;border:1px solid var(--bd);border-radius:8px;padding:7px;background:var(--bg);color:var(--tx)}
+input.sm{width:90px}textarea{font:11px/1.4 ui-monospace,Consolas,monospace;height:120px}
+.drop{border:2px dashed var(--bd);border-radius:10px;padding:18px;text-align:center;color:var(--mut);cursor:pointer}.drop.on{border-color:var(--acc);color:var(--acc)}
+.sw{appearance:none;width:38px;height:22px;border-radius:11px;background:var(--bd);position:relative;cursor:pointer;flex:none;transition:.15s}
+.sw:checked{background:var(--acc)}.sw::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.15s}.sw:checked::after{left:18px}
+.pill{font-size:10px;background:color-mix(in srgb,var(--mut) 20%,transparent);color:var(--mut);border-radius:6px;padding:1px 6px;margin-left:4px}
+.views{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){.views{grid-template-columns:1fr}}
+.v{position:relative;height:340px;border:1px solid var(--bd);border-radius:10px;overflow:hidden;background:var(--viewbg)}
+.v b{position:absolute;z-index:5;top:8px;left:10px;font-size:12px;color:var(--mut)}
+#busy{position:absolute;inset:0;z-index:9;display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:color-mix(in srgb,var(--bg) 85%,transparent)}
+.spin{width:34px;height:34px;border:4px solid var(--bd);border-top-color:var(--acc);border-radius:50%;animation:s .8s linear infinite}@keyframes s{to{transform:rotate(360deg)}}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}.st{background:var(--bg);border-radius:8px;padding:8px}.st b{font-size:18px;display:block}.st small{color:var(--mut)}
+.ch{padding:6px 0;border-bottom:1px solid var(--bd)}.ch:last-child{border:0}.msg{color:var(--mut);margin:6px 0 0;font-size:13px}.err{color:#e5484d}
+</style></head><body>
+<header><h1>Protein<span>Polish</span></h1><div class="tag">Upload messy PDB, download docking-ready protein in seconds.</div><button id="th">Dark / light</button></header>
+<main>
+<section>
+ <div class="card"><h2>1 · Input</h2>
+  <div class="drop" id="drop">Drop .pdb / .pdbqt here or click to browse</div>
+  <input type="file" id="file" accept=".pdb,.pdbqt,.ent,.txt" hidden>
+  <div class="row"><input type="text" id="pid" placeholder="PDB ID, e.g. 1HSG" maxlength="4"><button id="fetch">Fetch</button></div>
+  <div class="row"><button id="demo">Load demo</button><button id="paste">Use pasted text</button></div>
+  <textarea id="pt" placeholder="…or paste PDB text here"></textarea>
+  <p class="msg" id="inmsg"></p></div>
+ <div class="card"><h2>Presets</h2><div class="row"><button data-p="vina">Vina ready</button><button data-p="md">GROMACS ready</button><button data-p="pymol">PyMOL ready</button></div></div>
+ <div class="card"><h2>2 · Clean in browser</h2>
+  <div>Heterogens</div><div class="seg" id="het"><label><input type="radio" name="het" value="all" checked><span>Keep all</span></label><label><input type="radio" name="het" value="water"><span>Water only</span></label><label><input type="radio" name="het" value="remove"><span>Remove all</span></label></div>
+  <div class="row"><span>Remove alt. conformations (keep highest occupancy)</span><input class="sw" type="checkbox" id="alt" checked></div>
+  <div class="row"><span>Strip existing hydrogens</span><input class="sw" type="checkbox" id="remH"></div>
+  <div class="row"><span>Drop chains under 20 aa</span><input class="sw" type="checkbox" id="auto"></div>
+  <div style="margin-top:8px">Ligands detected (tick to remove)</div><div id="ligs" class="msg">Load a structure first.</div>
+  <div style="margin-top:8px">Chains (tick to keep · range e.g. 10-230)</div><div id="chs" class="msg">Load a structure first.</div></div>
+ <div class="card"><h2>3 · Repair options <span class="pill">Python export</span></h2>
+  <p class="msg" style="margin-top:0">These need OpenMM/PDBFixer. They are added to the script you can copy on the right.</p>
+  <div class="row"><span>Add missing residues</span><input class="sw py" type="checkbox" id="mr"></div>
+  <div class="row"><span>Add missing heavy atoms</span><input class="sw py" type="checkbox" id="mh" checked></div>
+  <div class="row"><span>Add missing hydrogens</span><input class="sw py" type="checkbox" id="ah" checked></div>
+  <div class="row"><span>pH</span><input class="sm" type="number" id="ph" value="7.4" min="0" max="14" step="0.1"></div>
+  <div class="row"><span>Replace nonstandard residues</span><input class="sw py" type="checkbox" id="ns"></div>
+  <div class="row"><span>Add solvent box (0.15 M NaCl)</span><input class="sw py" type="checkbox" id="sb"></div></div>
+</section>
+<section>
+ <div class="card" style="position:relative"><div id="busy"><div class="spin"></div>Polishing your protein…</div>
+  <h2>3D preview · before vs after</h2><div class="views"><div class="v" id="v1"><b>Before</b></div><div class="v" id="v2"><b>After</b></div></div>
+  <p class="msg">Cartoon = protein · sticks = ligands · red dots = waters. Drag to rotate, scroll to zoom.</p></div>
+ <div class="card"><h2>Cleaning log</h2><textarea id="log" readonly style="height:190px"></textarea></div>
+</section>
+<section>
+ <div class="card"><h2>Stats</h2><div class="stats" id="stats"><div class="st"><b>–</b><small>Load a structure</small></div></div><p class="msg" id="sum"></p></div>
+ <div class="card"><h2>Quality report</h2><div id="qr" class="msg">–</div></div>
+ <div class="card"><h2>Download</h2><div class="row"><button class="p" id="dl" disabled>cleaned.pdb</button><button id="dlc" disabled>cleaned.cif</button></div><div class="row"><button id="dll" disabled>log.txt</button><button id="dlv" disabled>vina_config.txt</button></div></div>
+ <div class="card"><h2>Docking box (Vina)</h2><div id="box" class="msg">–</div></div>
+ <div class="card"><h2>Ramachandran plot</h2><canvas id="rama" width="280" height="280" style="width:100%;max-width:280px;border:1px solid var(--bd);border-radius:8px"></canvas><p class="msg" id="rmsg"></p></div>
+ <div class="card"><h2>Reproduce with PDBFixer</h2><textarea id="py" readonly></textarea><div class="row"><button id="cp">Copy Python</button></div></div>
+</section></main>
+<footer style="max-width:900px;margin:0 auto;padding:10px 20px 40px;color:var(--mut)"><h2>About ProteinPolish</h2>
+<p>ProteinPolish is a free, login-free tool for cleaning protein structure files (PDB) before molecular docking or simulation. It runs entirely in your browser, so your structures are never uploaded to a server.</p>
+<p><b>What it does:</b> removes waters, selected ligands and alternate conformations, keeps chosen chains and residue ranges, previews before and after in 3D, reports close contacts, numbering gaps, disulfides and a Ramachandran plot, suggests an AutoDock Vina box, and exports PDB, mmCIF and a Vina config.</p>
+<p><b>What it does not do:</b> add hydrogens or missing atoms, assign charges or minimize energy. For those, use the generated PDBFixer script. Always check results before publishing.</p></footer>
+<script>
+const AA=new Set("ALA ARG ASN ASP CYS GLN GLU GLY HIS ILE LEU LYS MET PHE PRO SER THR TRP TYR VAL HID HIE HIP CYX ASH GLH LYN MSE SEC PYL DA DC DG DT DU A C G U".split(" "));
+const WAT=new Set(["HOH","WAT","H2O","DOD"]);const $=id=>document.getElementById(id);
+let atoms=[],out=null,v1=null,v2=null,theme=null,rname="input";
+function parse(t){const a=[];for(const l of t.split(/\r?\n/)){if(l.startsWith("ENDMDL"))break;if(!/^(ATOM  |HETATM)/.test(l))continue;
+ const x=+l.slice(30,38),y=+l.slice(38,46),z=+l.slice(46,54);if(isNaN(x+y+z))continue;const nm=l.slice(12,16).trim();
+ let el=l.slice(76,78).trim().toUpperCase();if(!el)el=(nm.replace(/[^A-Za-z]/g,"")[0]||"C").toUpperCase();
+ const oc=parseFloat(l.slice(54,60));a.push({l,het:l[0]==="H",name:nm,alt:l[16]||" ",res:l.slice(17,20).trim(),ch:l[21]||" ",ri:parseInt(l.slice(22,26)),ic:l[26]||" ",x,y,z,occ:isNaN(oc)?1:oc,el})}return a}
+const rk=a=>a.ch+"|"+a.ri+"|"+a.ic+"|"+a.res;
+const poly=a=>AA.has(a.res),isH=a=>a.el==="H"||a.el==="D";
+function chainInfo(A){const m={};for(const a of A)if(poly(a)){(m[a.ch]=m[a.ch]||{s:new Set(),lo:1e9,hi:-1e9});m[a.ch].s.add(a.ri+a.ic);m[a.ch].lo=Math.min(m[a.ch].lo,a.ri);m[a.ch].hi=Math.max(m[a.ch].hi,a.ri)}return m}
+function load(text,name){try{if(/^\s*data_/m.test(text.slice(0,2000))&&!/^(ATOM  |HETATM)/m.test(text))throw Error("mmCIF input is not supported in the browser cleaner. Convert it to PDB first.");
+ const a=parse(text);if(!a.length)throw Error("No ATOM/HETATM records found.");atoms=a;rname=name;
+ const ci=chainInfo(a),ligs={};for(const x of a)if(!poly(x)&&!WAT.has(x.res)){(ligs[x.res]=ligs[x.res]||new Set()).add(rk(x))}
+ $("ligs").innerHTML=Object.keys(ligs).length?Object.entries(ligs).map(([r,s])=>`<div class="row"><label><input type="checkbox" class="lg" value="${r}"> ${r} <span class="pill">×${s.size}</span></label></div>`).join(""):"None";
+ $("chs").innerHTML=Object.keys(ci).length?Object.entries(ci).map(([c,i])=>`<div class="ch"><div class="row"><label><input type="checkbox" class="ck" value="${c}" checked> Chain ${c.trim()||"(blank)"} · ${i.s.size} aa <span class="pill">${i.lo}–${i.hi}</span></label></div><input type="text" class="rg" data-c="${c}" placeholder="range, e.g. ${i.lo}-${i.hi}"></div>`).join(""):"No polymer chains";
+ $("inmsg").className="msg";$("inmsg").textContent=`Loaded ${name}: ${a.length} atoms.`;go(true)}catch(e){$("inmsg").className="msg err";$("inmsg").textContent=e.message}}
+function opts(){const rg={};document.querySelectorAll(".rg").forEach(i=>{const m=i.value.trim().match(/^(\d+)\s*[-–]\s*(\d+)$/);i.style.borderColor="";if(m&&+m[1]<=+m[2])rg[i.dataset.c]=[+m[1],+m[2]];else if(i.value.trim())i.style.borderColor="#e5484d"});
+ return{het:document.querySelector("input[name=het]:checked").value,alt:$("alt").checked,remH:$("remH").checked,auto:$("auto").checked,lig:new Set([...document.querySelectorAll(".lg:checked")].map(i=>i.value)),keep:new Set([...document.querySelectorAll(".ck:checked")].map(i=>i.value)),rg}}
+function clean(o){let A=atoms.slice();const R={h:0,alt:0,w:new Set(),lig:{},ch:[],tr:new Set()};const log=[`Input: ${rname}, ${A.length} atoms (first model)`];
+ if(o.remH){const b=A.length;A=A.filter(a=>!isH(a));R.h=b-A.length;log.push(`Removed ${R.h} hydrogens`)}
+ if(o.alt){const sum={};for(const a of A)if(a.alt!==" "){const k=rk(a);(sum[k]=sum[k]||{})[a.alt]=(sum[k][a.alt]||0)+a.occ}
+  const best={};for(const k in sum){let b=null;for(const al in sum[k])if(b===null||sum[k][al]>sum[k][b])b=al;best[k]=b}
+  const b0=A.length;A=A.filter(a=>a.alt===" "||best[rk(a)]===a.alt);R.alt=b0-A.length;A.forEach(a=>{a.alt=" "});log.push(`Removed ${R.alt} alternate-conformation atoms (kept highest occupancy)`)}
+ const ci=chainInfo(atoms);const drop=c=>!o.keep.has(c)||(o.auto&&ci[c]&&ci[c].s.size<20);
+ A=A.filter(a=>{if(drop(a.ch)){if(!R.ch.includes(a.ch))R.ch.push(a.ch);return false}
+  if(WAT.has(a.res)){if(o.het==="remove"){R.w.add(rk(a));return false}return true}
+  if(!poly(a)&&(o.het!=="all"||o.lig.has(a.res))){(R.lig[a.res]=R.lig[a.res]||new Set()).add(rk(a));return false}
+  if(poly(a)&&o.rg[a.ch]&&(a.ri<o.rg[a.ch][0]||a.ri>o.rg[a.ch][1])){R.tr.add(rk(a));return false}return true});
+ if(R.w.size)log.push(`Removed ${R.w.size} waters`);for(const r in R.lig)log.push(`Removed ligand ${r} ×${R.lig[r].size}`);
+ if(R.ch.length)log.push(`Removed chain(s): ${R.ch.map(c=>c.trim()||"blank").join(", ")}`);if(R.tr.size)log.push(`Trimmed ${R.tr.size} residues outside ranges`);
+ const L=[];let n=0,pv=null;for(const a of A){if(pv&&poly(pv)&&(pv.ch!==a.ch||!poly(a)))L.push("TER");n++;L.push(a.l.slice(0,6)+String(n%100000).padStart(5)+a.l.slice(11,16)+" "+a.l.slice(17));pv=a}
+ if(pv&&poly(pv))L.push("TER");L.push("END");
+ // quality
+ let gaps=0,ng=0,pr=null;for(const a of A)if(poly(a)&&a.name==="CA"){if(pr&&pr.ch===a.ch&&a.ri-pr.ri>1){gaps+=a.ri-pr.ri-1;ng++}pr=a}
+ const ss=[],sg=A.filter(a=>a.res==="CYS"&&a.name==="SG");for(let i=0;i<sg.length;i++)for(let j=i+1;j<sg.length;j++){const d=Math.hypot(sg[i].x-sg[j].x,sg[i].y-sg[j].y,sg[i].z-sg[j].z);if(d<2.5)ss.push(`${sg[i].ch.trim()}${sg[i].ri}–${sg[j].ch.trim()}${sg[j].ri}`)}
+ const H=A.filter(a=>!isH(a)&&!WAT.has(a.res)),g=new Map(),C=2.2,key=(x,y,z)=>x+","+y+","+z;let cl=0;
+ H.forEach((a,i)=>{a.i=i;const k=key(Math.floor(a.x/C),Math.floor(a.y/C),Math.floor(a.z/C));if(!g.has(k))g.set(k,[]);g.get(k).push(a)});
+ for(const a of H){const cx=Math.floor(a.x/C),cy=Math.floor(a.y/C),cz=Math.floor(a.z/C);
+  for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++)for(let dz=-1;dz<=1;dz++){const c=g.get(key(cx+dx,cy+dy,cz+dz));if(!c)continue;
+   for(const b of c){if(b.i<=a.i)continue;if(rk(a)===rk(b))continue;if(a.ch===b.ch&&Math.abs(a.ri-b.ri)<=1&&(a.name==="C"||a.name==="N"||b.name==="C"||b.name==="N"))continue;if(a.name==="SG"&&b.name==="SG")continue;
+    if((a.x-b.x)**2+(a.y-b.y)**2+(a.z-b.z)**2<C*C)cl++}}}
+ log.push(`Output: ${A.length} atoms`,`Quality: ${cl} close contacts <2.2 Å, ${gaps} residues missing in ${ng} gaps, ${ss.length} disulfides`);
+ return{A,text:L.join("\n")+"\n",log:log.join("\n"),R,cl,gaps,ng,ss,n0:atoms.length,nres:new Set(A.filter(poly).map(rk)).size,hyd:A.filter(isH).length}}
+function style(v,txt){v.clear();v.addModel(txt,"pdb");v.setStyle({hetflag:false},{cartoon:{color:"spectrum"}});v.setStyle({hetflag:true},{stick:{radius:.15,colorscheme:"greenCarbon"}});v.setStyle({resn:["HOH","WAT","H2O","DOD"]},{sphere:{radius:.3,color:"#ff5c5c"}});v.zoomTo();v.render()}
+function draw(before,after){try{const bg=getComputedStyle(document.documentElement).getPropertyValue("--viewbg").trim()||"white";
+ if(!v1||theme!==bg){["v1","v2"].forEach(i=>$(i).querySelectorAll("canvas").forEach(c=>c.remove()));v1=$3Dmol.createViewer($("v1"),{backgroundColor:bg});v2=$3Dmol.createViewer($("v2"),{backgroundColor:bg});theme=bg}
+ if(before)style(v1,atoms.map(a=>a.l).join("\n"));style(v2,after)}catch(e){$("inmsg").className="msg err";$("inmsg").textContent="3D viewer unavailable: "+e.message}}
+function py(o){const bad=[...document.querySelectorAll(".ck")].filter(i=>!i.checked).map(i=>`'${i.value.trim()||" "}'`);
+ return["from pdbfixer import PDBFixer","from openmm.app import PDBFile","","fixer = PDBFixer(filename='"+bn()+".pdb')",bad.length?`fixer.removeChains(chainIds=[${bad.join(", ")}])`:"# keeping all chains",
+ $("mr").checked?"fixer.findMissingResidues()":"fixer.missingResidues = {}",$("ns").checked?"fixer.findNonstandardResidues(); fixer.replaceNonstandardResidues()":"",
+ o.het==="all"?"# keeping all heterogens":`fixer.removeHeterogens(keepWater=${o.het==="water"?"True":"False"})`,
+ $("mh").checked?"fixer.findMissingAtoms(); fixer.addMissingAtoms()":"",$("ah").checked?`fixer.addMissingHydrogens(${+$("ph").value||7.4})`:"",
+ $("sb").checked?"fixer.addSolvent(fixer.topology.getUnitCellDimensions() or None, ionicStrength=0.15*__import__('openmm').unit.molar)  # check box size for your system":"",
+ "PDBFile.writeFile(fixer.topology, fixer.positions, open('cleaned_"+bn()+".pdb', 'w'), keepIds=True)"].filter(s=>s!=="").join("\n")}
+let first=true;function go(before){if(!atoms.length)return;$("busy").style.display="flex";setTimeout(()=>{try{const o=opts();out=clean(o);render(out,o);draw(before||first,out.text);first=false}catch(e){$("inmsg").className="msg err";$("inmsg").textContent="Error: "+e.message}$("busy").style.display="none"},300)}
+function render(r,o){const nl=Object.values(r.R.lig).reduce((s,x)=>s+x.size,0);
+ $("stats").innerHTML=[["atoms",r.n0+" → "+r.A.length],["residues",r.nres],["waters removed",r.R.w.size],["ligands removed",nl],["chains removed",r.R.ch.length],["alt. atoms removed",r.R.alt]].map(([k,v])=>`<div class="st"><b>${v}</b><small>${k}</small></div>`).join("");
+ $("sum").textContent=`Removed: ${r.R.w.size} waters, ${nl} ligand residues${nl?" ("+Object.keys(r.R.lig).join(", ")+")":""}${r.R.ch.length?", chain "+r.R.ch.map(c=>c.trim()||"blank").join(", "):""}.`;
+ $("qr").innerHTML=`Close contacts (&lt;2.2 Å): <b>${r.cl}</b><br>Missing residues (numbering gaps): <b>${r.gaps}</b> in ${r.ng} gaps<br>Disulfides: <b>${r.ss.length}</b>${r.ss.length?" ("+r.ss.join(", ")+")":""}<br>Hydrogens present: <b>${r.hyd}</b>`;
+ $("log").value=r.log;$("dl").disabled=$("dll").disabled=$("dlc").disabled=$("dlv").disabled=false;$("py").value=py(o);box();rama(r.A);const b=bn();$("dl").textContent="cleaned_"+b+".pdb";$("dlc").textContent="cleaned_"+b+".cif";$("dll").textContent="cleaned_"+b+"_log.txt";$("dlv").textContent="vina_config_"+b+".txt"}
+function box(){const L={};atoms.forEach(a=>{if(!poly(a)&&!WAT.has(a.res)&&!isH(a))(L[rk(a)]=L[rk(a)]||[]).push(a)});const ks=Object.keys(L);let S,src;
+ if(ks.length){S=L[ks.sort((a,b)=>L[b].length-L[a].length)[0]];src="largest ligand ("+S[0].res+")"}else{S=atoms.filter(a=>poly(a)&&!isH(a));src="whole protein"}
+ if(!S.length){window.bx=null;$("box").textContent="No atoms to centre on.";return}
+ const ax=["x","y","z"],c=ax.map(k=>S.reduce((s,a)=>s+a[k],0)/S.length),ext=ax.map(k=>S.reduce((m,a)=>Math.max(m,a[k]),-1e9)-S.reduce((m,a)=>Math.min(m,a[k]),1e9)),pad=ks.length?16:10,sz=ext.map(v=>Math.max(ks.length?20:0,Math.round(v+pad)));
+ window.bx={c:c.map(v=>+v.toFixed(2)),s:sz,src};$("box").innerHTML=`Centre: <b>${bx.c.join(", ")}</b><br>Size: <b>${sz.join(" × ")} Å</b><br>Based on ${src}, from the uploaded structure.`}
+function dih(p,q,r,s){const sub=(a,b)=>[a.x-b.x,a.y-b.y,a.z-b.z],dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2],cr=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+ const b0=sub(p,q),b1=sub(r,q),b2=sub(s,r),n=Math.hypot(...b1),u=b1.map(v=>v/n),v=b0.map((x,i)=>x-dot(b0,u)*u[i]),w=b2.map((x,i)=>x-dot(b2,u)*u[i]);return Math.atan2(dot(cr(u,v),w),dot(v,w))*180/Math.PI}
+function rama(A){const R=new Map();for(const a of A)if(poly(a)&&["N","CA","C"].includes(a.name)){const k=a.ch+"|"+a.ri+"|"+a.ic;if(!R.has(k))R.set(k,{ch:a.ch,ri:a.ri});R.get(k)[a.name]=a}
+ const rs=[...R.values()],pts=[];for(let i=1;i<rs.length-1;i++){const p=rs[i-1],c=rs[i],n=rs[i+1];if(p.ch===c.ch&&c.ch===n.ch&&c.ri-p.ri===1&&n.ri-c.ri===1&&p.C&&c.N&&c.CA&&c.C&&n.N)pts.push([dih(p.C,c.N,c.CA,c.C),dih(c.N,c.CA,c.C,n.N)])}
+ const cv=$("rama"),g=cv.getContext("2d"),st=getComputedStyle(document.documentElement),W=cv.width;g.clearRect(0,0,W,W);g.strokeStyle=st.getPropertyValue("--bd");g.fillStyle=st.getPropertyValue("--mut");
+ for(let t=-180;t<=180;t+=90){const p=(t+180)/360*W;g.beginPath();g.moveTo(p,0);g.lineTo(p,W);g.moveTo(0,p);g.lineTo(W,p);g.stroke()}
+ g.fillText("φ →",W-30,W-4);g.fillText("ψ ↑",4,12);g.fillStyle="#0A84FF";pts.forEach(([f,s])=>{g.beginPath();g.arc((f+180)/360*W,(180-s)/360*W,2.5,0,7);g.fill()});$("rmsg").textContent=pts.length?pts.length+" residues plotted (φ/ψ, −180 to 180)":"No complete backbone triplets to plot."}
+function cif(A){const q=s=>/['" ]/.test(s)?'"'+s+'"':s,H=["data_cleaned","loop_","_atom_site.group_PDB","_atom_site.id","_atom_site.type_symbol","_atom_site.label_atom_id","_atom_site.label_comp_id","_atom_site.label_asym_id","_atom_site.label_seq_id","_atom_site.Cartn_x","_atom_site.Cartn_y","_atom_site.Cartn_z","_atom_site.occupancy","_atom_site.auth_seq_id","_atom_site.auth_asym_id","_atom_site.pdbx_PDB_model_num"];
+ return H.concat(A.map((a,i)=>{const c=a.ch.trim()||"A";return [a.het?"HETATM":"ATOM",i+1,a.el,q(a.name),a.res,c,poly(a)?a.ri:".",a.x.toFixed(3),a.y.toFixed(3),a.z.toFixed(3),a.occ.toFixed(2),a.ri,c,1].join(" ")})).join("\n")+"\n#\n"}
+const bn=()=>rname.replace(/\.[^.]*$/,"").replace(/^cleaned_/i,"").replace(/[^\w.-]+/g,"_")||"protein";
+function save(txt,fn){const u=URL.createObjectURL(new Blob([txt],{type:"text/plain"})),a=document.createElement("a");a.href=u;a.download=fn;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000)}
+$("dl").onclick=()=>out&&save(out.text,"cleaned_"+bn()+".pdb");$("dlc").onclick=()=>out&&save(cif(out.A),"cleaned_"+bn()+".cif");
+$("dlv").onclick=()=>window.bx&&save(["# Convert cleaned_"+bn()+".pdb to PDBQT first (e.g. Meeko or ADFR prepare_receptor)","receptor = cleaned_"+bn()+".pdbqt","ligand = ligand.pdbqt","center_x = "+bx.c[0],"center_y = "+bx.c[1],"center_z = "+bx.c[2],"size_x = "+bx.s[0],"size_y = "+bx.s[1],"size_z = "+bx.s[2],"exhaustiveness = 8",""].join("\n"),"vina_config_"+bn()+".txt");$("dll").onclick=()=>out&&save(out.log+"\n","cleaned_"+bn()+"_log.txt");
+$("cp").onclick=async()=>{try{await navigator.clipboard.writeText($("py").value);$("cp").textContent="Copied"}catch(e){$("py").select();$("cp").textContent="Select + copy"}setTimeout(()=>$("cp").textContent="Copy Python",1500)};
+$("drop").onclick=()=>$("file").click();$("file").onchange=e=>readF(e.target.files[0]);
+function readF(f){if(!f)return;const r=new FileReader();r.onload=()=>load(r.result,f.name);r.readAsText(f)}
+$("drop").ondragover=e=>{e.preventDefault();$("drop").classList.add("on")};$("drop").ondragleave=()=>$("drop").classList.remove("on");
+$("drop").ondrop=e=>{e.preventDefault();$("drop").classList.remove("on");readF(e.dataTransfer.files[0])};
+$("paste").onclick=()=>$("pt").value.trim()?load($("pt").value,"pasted.pdb"):($("inmsg").textContent="Paste PDB text first.");
+$("fetch").onclick=async()=>{const id=$("pid").value.trim().toUpperCase();if(!/^[0-9][A-Z0-9]{3}$/.test(id)){$("inmsg").className="msg err";$("inmsg").textContent="Enter a valid 4-character PDB ID.";return}
+ try{$("inmsg").className="msg";$("inmsg").textContent="Fetching "+id+"…";const r=await fetch(`https://files.rcsb.org/download/${id}.pdb`);if(!r.ok)throw Error("not found");load(await r.text(),id+".pdb")}
+ catch(e){$("inmsg").className="msg err";$("inmsg").textContent="Could not fetch from RCSB (blocked in this hosted preview, or the entry has no PDB-format file). Download it from rcsb.org and drop it here."}};
+$("demo").onclick=()=>{const L=[],f=(n,nm,al,res,ch,ri,x,y,z,oc,el,h)=>L.push((h?"HETATM":"ATOM  ")+String(n).padStart(5)+" "+nm.padEnd(4)+al+res.padStart(3)+" "+ch+String(ri).padStart(4)+"    "+x.toFixed(3).padStart(8)+y.toFixed(3).padStart(8)+z.toFixed(3).padStart(8)+oc.toFixed(2).padStart(6)+"  0.00".padStart(6)+"          "+el.padStart(2));
+ let n=1;const seq=["ALA","LEU","GLU","LYS","VAL","SER"];const helix=(ch,len,ox)=>{for(let i=0;i<len;i++){const t=i*100*Math.PI/180,cx=2.3*Math.cos(t)+ox,cy=2.3*Math.sin(t),cz=1.5*i,r=seq[i%6];
+  f(n++,"N","",r,ch,i+1,cx+1.2*Math.cos(t-1.0)-0.8*Math.cos(t),cy+1.2*Math.sin(t-1.0)-0.8*Math.sin(t),cz-0.9,1,"N");f(n++,"CA","",r,ch,i+1,cx,cy,cz,1,"C");
+  f(n++,"C","",r,ch,i+1,cx+1.2*Math.cos(t+1.0)-0.8*Math.cos(t),cy+1.2*Math.sin(t+1.0)-0.8*Math.sin(t),cz+0.9,1,"C");f(n++,"O","",r,ch,i+1,cx+2.2*Math.cos(t+1.0)-0.8*Math.cos(t),cy+2.2*Math.sin(t+1.0)-0.8*Math.sin(t),cz+1.1,1,"O")}L.push("TER")};
+ helix("A",30,0);helix("B",12,14);for(let i=0;i<6;i++)f(n++,"FE","","HEM","A",101,6+i*.3,0+i*.2,12+i*.4,1,"FE",1);
+ for(let i=0;i<40;i++)f(n++,"O","","HOH","A",200+i,-8+(i%8)*3,-9+Math.floor(i/8)*4,-3+(i%5)*5,1,"O",1);
+ load(L.join("\n"),"synthetic_demo.pdb")};
+const P={vina:{het:"remove",alt:1,remH:1,auto:1},md:{het:"water",alt:1,remH:0,auto:0},pymol:{het:"all",alt:1,remH:0,auto:0}};
+document.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{const p=P[b.dataset.p];document.querySelector(`input[name=het][value=${p.het}]`).checked=true;$("alt").checked=!!p.alt;$("remH").checked=!!p.remH;$("auto").checked=!!p.auto;
+ $("ah").checked=b.dataset.p!=="pymol";$("mh").checked=true;$("ns").checked=b.dataset.p==="md";go()});
+document.addEventListener("change",e=>{if(e.target.closest(".card")&&e.target.matches("input:not(#file)")&&atoms.length)go()});
+document.addEventListener("input",e=>{if(e.target.matches(".rg,#ph")&&atoms.length){clearTimeout(window._t);window._t=setTimeout(go,400)}});
+$("th").onclick=()=>{const d=document.documentElement,dark=getComputedStyle(d).getPropertyValue("--bg").trim()==="#0b1220";d.dataset.theme=dark?"light":"dark";if(atoms.length)setTimeout(()=>draw(true,out?out.text:""),50)};
+</script></body></html>
